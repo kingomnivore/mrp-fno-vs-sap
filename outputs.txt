@@ -1,0 +1,361 @@
+
+==========================================================================
+0. PARAMETERS THAT ARE JUDGEMENT, NOT DERIVATION
+==========================================================================
+  storage cost percentage per year   20%
+  order cost, headline               1
+  order cost sweep                   (0.25, 1.0, 5.0, 15.0, 50.0)
+  misspecification factors           (0.5, 2.0)
+  storage days per year              365
+  service floor for any cost ranking 95%
+  Groff reading used                 stop_rule
+  replan cadence, days               7
+  firm demand visibility, days       28
+  opening stock, days of mean demand 14
+
+==========================================================================
+1. GATES
+==========================================================================
+  SAP's published worked example, shared by all four optimum procedures:
+    price 20, lot-size-independent costs 100, storage 10%,
+    1000 units on four dates one week apart
+
+    [PASS] published lot sizes reproduce
+           SP 2000, WI 2000, DY 3000, GR 1000, all as published
+    [PASS] Groff's two comparison figures reproduce
+           saving 1.79 against SAP's 1.79, added storage 19.18 against SAP's 19.18
+    [PASS] both readings of Groff pass the published example
+           both readings return SAP's 1000, so the published example does not choose between them
+    [PASS] the four procedures give three distinct answers
+           3 distinct lot sizes across the four procedures: {'SP': 2000.0, 'WI': 2000.0, 'DY': 3000.0, 'GR': 1000.0}
+    [PASS] the storage divisor is pinned to 365
+           a 360 day divisor gives 19.44 where SAP prints 19.18, so 365 is the right reading
+
+  Structural identities:
+    [PASS] no rule beats the Wagner and Whitin optimum
+           smallest margin above the optimum: +0.000000
+    [PASS] a one day bucket equals one order per requirement
+           0 mismatches across 200 series and six rules
+    [PASS] a calendar-anchored plan does not move on a perfect forecast
+           largest plan churn on a perfect forecast: 0.00e+00
+    [PASS] results reproduce in a fresh process
+           stable_seed returned 2560379992, expected 2560379992
+    [PASS] SAP's three receipt placements behave as documented
+           0 quantity mismatches; worst projected on-hand first +0, start +0, end -706
+    [PASS] the long-term lot size switches on a period boundary
+           every switch date lands on a period boundary at or after the raw count
+
+==========================================================================
+2. EXTERNAL CHECK
+==========================================================================
+  This firm's monthly revenue against ONS series J596,
+  Retail Sales Index for non-store retailing, value not seasonally adjusted.
+    overlapping months        23  (2010-01 to 2011-11)
+    correlation, levels       0.858
+    correlation, logs         0.807
+    peak month, this firm     NOV
+    peak month, ONS           NOV
+    November against own mean 1.75 vs ONS 1.35
+
+==========================================================================
+3. PRICES AND WHAT THEY IMPLY
+==========================================================================
+  items carrying a median unit price   3,498
+  median unit price                    2.10
+  5th to 95th percentile               0.42 to 9.95
+
+  EOQ-implied cycle length in days, by assumed order cost:
+      order cost      p10   median      p90   % over 56d
+            0.25      7.1     17.6     51.8         8.4%
+               1     14.1     35.1    103.5        27.1%
+               5     31.5     78.5    231.5        68.8%
+              15     54.6    136.0    401.0        89.4%
+              50     99.8    248.3    732.2        98.1%
+
+==========================================================================
+4. H1 STATIC. PERFECT FORESIGHT, SINGLE PASS
+==========================================================================
+  Cost as a multiple of the Wagner and Whitin optimum. Median over items.
+
+      order cost       SP       WI       DY       GR
+            0.25    1.077    1.333    1.155    1.124
+               1    1.090    1.262    1.325    1.209
+               5    1.090    1.196    1.486    1.310
+              15    1.085    1.171    1.546    1.432
+              50    1.067    1.144    1.319    1.533
+
+  Best single coverage period against per-item tuning:
+      order cost  one setting     at    tuned       SP   closed
+            0.25        1.426     L7    1.229    1.077    56.6%
+               1        1.498    L14    1.195    1.090    74.3%
+               5        1.513    L42    1.172    1.090    80.5%
+              15        1.513    L84    1.154    1.085    84.0%
+              50        1.467   L168    1.156    1.067    77.7%
+
+==========================================================================
+5. H1 ROLLING. WEEKLY REGENERATION WITH FORECAST ERROR
+==========================================================================
+  Ranked among rules clearing a 95% fill floor.
+
+  Fast-moving distributor
+    best overall        SP Part Period Balancing  (SAP only)
+    best F&O available  Per period 14d, costing +29.2%
+    dropped below floor Min/Max
+
+  Long-lead importer
+    best overall        SP Part Period Balancing  (SAP only)
+    best F&O available  Per period 14d, costing +8.8%
+    dropped below floor Min/Max
+
+  Seasonal wholesaler
+    best overall        SP Part Period Balancing  (SAP only)
+    best F&O available  Per period 7d, costing +27.8%
+    dropped below floor Min/Max
+
+  Spare parts operation
+    best overall        Per period 56d  (Both)
+    best F&O available  Per period 56d, costing +0.0%
+    dropped below floor Min/Max, Per requirement
+
+  Volatile demand
+    best overall        SP Part Period Balancing  (SAP only)
+    best F&O available  Per period 14d, costing +21.8%
+    dropped below floor Min/Max
+
+  Full table, cost indexed to the cheapest rule in each case:
+
+    Fast-moving distributor
+      rule                              who           fill    cover  orders/y  cost idx
+      SP Part Period Balancing          SAP only    1.0000      8.9      18.6     1.000
+      GR Groff Reorder Procedure        SAP only    1.0000      6.1      23.7     1.007
+      WI Sliding Economic Lot Size      SAP only    1.0000     11.2      18.4     1.177
+      DY Dynamic Planning Calculation   SAP only    1.0000     18.1      10.3     1.200
+      Per period 14d                    Both        1.0000      8.8      17.8     1.292
+      Per period 7d                     Both        1.0000      5.5      33.5     1.317
+      Short 7d / long 28d               SAP only    1.0000      5.1      36.3     1.359
+      Calendar bucket 7d                SAP only    1.0000      5.1      36.3     1.359
+      Short 7d / long 56d               SAP only    1.0000      5.1      36.3     1.359
+      Min/Max                           Both        0.8892     15.3      10.2     1.750
+      Calendar bucket 28d               SAP only    0.9997     14.4      12.8     1.793
+      Per period 28d                    Both        1.0000     16.2       9.6     1.871
+      Per period 56d                    Both        1.0000     29.5       5.0     3.168
+      Per requirement                   Both        1.0000      2.8     144.9     3.800
+
+    Long-lead importer
+      rule                              who           fill    cover  orders/y  cost idx
+      Min/Max                           Both        0.8311     60.3       6.7     1.000
+      SP Part Period Balancing          SAP only    0.9872    155.8      16.7     1.175
+      GR Groff Reorder Procedure        SAP only    0.9790    135.8      22.5     1.192
+      Per period 14d                    Both        0.9811    134.2      19.0     1.278
+      Calendar bucket 28d               SAP only    0.9838    139.7      16.0     1.285
+      Short 7d / long 28d               SAP only    0.9838    143.4      14.8     1.298
+      Per period 28d                    Both        0.9871    138.3      12.7     1.310
+      Per period 7d                     Both        0.9737    136.8      25.9     1.325
+      Calendar bucket 7d                SAP only    0.9695    136.5      28.7     1.346
+      Short 7d / long 56d               SAP only    0.9860    147.6      13.1     1.390
+      DY Dynamic Planning Calculation   SAP only    0.9897    186.4      11.3     1.411
+      WI Sliding Economic Lot Size      SAP only    0.9885    184.4      12.7     1.540
+      Per period 56d                    Both        0.9913    161.1       7.7     1.714
+      Per requirement                   Both        0.9629    153.9      54.0     1.832
+
+    Seasonal wholesaler
+      rule                              who           fill    cover  orders/y  cost idx
+      SP Part Period Balancing          SAP only    0.9996     34.0      11.8     1.000
+      GR Groff Reorder Procedure        SAP only    0.9979     18.9      16.4     1.031
+      DY Dynamic Planning Calculation   SAP only    0.9992     54.5       6.7     1.175
+      WI Sliding Economic Lot Size      SAP only    0.9992     44.1      10.9     1.179
+      Per period 7d                     Both        0.9994     16.8      22.4     1.278
+      Per period 14d                    Both        0.9986     20.5      13.5     1.303
+      Short 7d / long 28d               SAP only    0.9996     16.3      24.0     1.303
+      Calendar bucket 7d                SAP only    0.9996     16.3      24.0     1.303
+      Short 7d / long 56d               SAP only    0.9996     16.3      24.0     1.303
+      Calendar bucket 28d               SAP only    0.9972     23.7      10.5     1.599
+      Per period 28d                    Both        0.9980     28.6       7.6     1.762
+      Min/Max                           Both        0.8551     31.7       7.6     2.066
+      Per period 56d                    Both        0.9988     44.9       4.2     2.753
+      Per requirement                   Both        0.9996     14.8      82.3     3.158
+
+    Spare parts operation
+      rule                              who           fill    cover  orders/y  cost idx
+      Min/Max                           Both        0.8372     68.6       5.0     1.000
+      Per period 56d                    Both        0.9830    170.3       4.6     1.840
+      Per period 28d                    Both        0.9789    165.2       6.9     2.157
+      Short 7d / long 56d               SAP only    0.9822    175.3       5.4     2.172
+      Calendar bucket 28d               SAP only    0.9629    187.5       8.6     2.203
+      DY Dynamic Planning Calculation   SAP only    0.9880    228.9       3.4     2.221
+      Calendar bucket 7d                SAP only    0.9510    167.0      12.7     2.223
+      GR Groff Reorder Procedure        SAP only    0.9641    167.4       9.3     2.223
+      WI Sliding Economic Lot Size      SAP only    0.9877    220.7       3.6     2.315
+      Short 7d / long 28d               SAP only    0.9512    178.8      10.7     2.329
+      Per period 7d                     Both        0.9537    183.8      11.3     2.493
+      Per requirement                   Both        0.9398    200.5      15.3     2.731
+      Per period 14d                    Both        0.9601    181.8       9.5     3.001
+      SP Part Period Balancing          SAP only    0.9861    206.2       5.2     3.123
+
+    Volatile demand
+      rule                              who           fill    cover  orders/y  cost idx
+      SP Part Period Balancing          SAP only    0.9999     21.5      10.4     1.000
+      GR Groff Reorder Procedure        SAP only    0.9998     13.8      15.4     1.041
+      DY Dynamic Planning Calculation   SAP only    0.9999     34.1       6.0     1.186
+      Per period 14d                    Both        0.9999     15.4      14.2     1.218
+      WI Sliding Economic Lot Size      SAP only    0.9999     34.9       9.8     1.309
+      Per period 7d                     Both        1.0000     11.8      24.3     1.398
+      Calendar bucket 28d               SAP only    0.9996     19.5      11.6     1.461
+      Calendar bucket 7d                SAP only    1.0000     11.3      27.3     1.494
+      Short 7d / long 56d               SAP only    1.0000     11.3      27.3     1.494
+      Short 7d / long 28d               SAP only    1.0000     11.3      27.3     1.494
+      Per period 28d                    Both        0.9999     23.5       8.2     1.505
+      Min/Max                           Both        0.8687     26.0       7.4     1.615
+      Per period 56d                    Both        0.9987     43.1       4.6     2.701
+      Per requirement                   Both        1.0000      9.7      82.9     3.581
+
+
+==========================================================================
+6. H1 ROBUSTNESS. WHEN THE ASSUMED ORDER COST IS WRONG
+==========================================================================
+  The rule is run believing the order cost is factor x true.
+  The outcome is then priced at the TRUE cost.
+  F&O's Per period reads no cost and so cannot be misinformed about one.
+
+    rule                              who           K x0.5      K x1      K x2    swing
+    DY Dynamic Planning Calculation   SAP only       49.83     58.67     78.63    57.8%
+    GR Groff Reorder Procedure        SAP only       55.23     51.46     50.19    10.0%
+    WI Sliding Economic Lot Size      SAP only       60.88     61.58     66.02     8.5%
+    SP Part Period Balancing          SAP only       51.18     49.90     53.23     6.7%
+    Per period 28d                    Both           83.88     83.88     83.88     0.0%
+    Per period 14d                    Both           64.16     64.16     64.16     0.0%
+    Per period 7d                     Both           63.77     63.77     63.77     0.0%
+    Per period 56d                    Both          137.85    137.85    137.85     0.0%
+
+  Best SAP optimum against best F&O coverage period, at each level:
+    assumed K = 0.5x true   best SAP DY Dynamic Planning Calculation    49.83   best F&O Per period 7d        63.77   SAP ahead +28.0%
+    assumed K = 1x true   best SAP SP Part Period Balancing           49.90   best F&O Per period 7d        63.77   SAP ahead +27.8%
+    assumed K = 2x true   best SAP GR Groff Reorder Procedure         50.19   best F&O Per period 7d        63.77   SAP ahead +27.1%
+
+==========================================================================
+7. H2 AND H3. ANCHORING AGAINST RECEIPT PLACEMENT
+==========================================================================
+  Two-way design. H2 reads anchored against floating at the same
+  placement; H3 reads the three placements at the same anchoring.
+
+  H2. Calendar-anchored against floating, receipt at first requirement.
+      bucket    cost %    fill %   cover %  orders %
+          7d      2.35      0.00    -12.73      6.45
+         14d      7.08     -0.00    -15.57     30.00
+         28d      0.61      0.00    -17.15     33.33
+         56d     -0.63      0.00    -10.89     25.00
+
+  H2 against weekday rhythm. Anchored minus floating cost, per cent.
+  Rows are the share of an item's demand on its busiest weekday.
+  Flat across the six days this firm trades would be 0.167.
+    L                    7          14        28        56
+    band                                                  
+    (0.166, 0.25]  2.055849   9.540544  0.361622 -2.865547
+    (0.25, 0.3]    3.003564   8.789739  0.944385 -3.469299
+    (0.3, 0.4]     6.373547   8.831234  0.187747  0.714394
+    (0.4, 1.01]    9.118032  12.062123  2.483439 -0.134468
+
+  H3. Three receipt positions, bucket held anchored.
+  Read against `first`, the position SAP ships and the only one F&O has.
+      bucket placement     cost %    fill %   cover %  fill level
+          7d start           0.93      0.00     24.35      1.0000
+          7d end            18.85    -23.38    888.81      0.7662
+         14d start           7.09     -0.00     20.48      0.9997
+         14d end            24.26    -27.53    348.36      0.7209
+         28d start          20.62      0.00     27.13      0.9999
+         28d end             8.15    -36.32     84.19      0.6365
+         56d start          21.17      0.00     26.95      1.0000
+         56d end           -14.03    -51.45    -33.23      0.4839
+
+==========================================================================
+8. H4. SHORT-TERM AND LONG-TERM LOT SIZE
+==========================================================================
+  Compared against a plain 7 day calendar bucket, which is the same
+  near-term rule with no long-term switch. Any difference comes from
+  the far-horizon rule alone.
+
+  Short 7d / long 28d
+    case                        lead  identical   cost %  fill pts
+    Fast-moving distributor       5d     100.0%     0.00      0.00
+    Volatile demand              14d     100.0%     0.00      0.00
+    Seasonal wholesaler          20d     100.0%     0.00      0.00
+    Spare parts operation        45d       1.0%    -1.32      0.02
+    Long-lead importer           60d       0.0%   -23.57      1.43
+
+  Short 7d / long 56d
+    case                        lead  identical   cost %  fill pts
+    Fast-moving distributor       5d     100.0%     0.00      0.00
+    Volatile demand              14d     100.0%     0.00      0.00
+    Seasonal wholesaler          20d     100.0%     0.00      0.00
+    Spare parts operation        45d       1.0%   -17.24      3.12
+    Long-lead importer           60d       0.0%   -23.06      1.65
+
+
+==========================================================================
+9. WHAT TUNING THE COVERAGE PERIOD IS WORTH
+==========================================================================
+  Fine grid, 3 to 112 days, rolling regeneration, service floor applied.
+  Cost against Part Period Balancing in the same case, per cent.
+  Negative means the F&O rule is cheaper.
+
+    case                        one setting  demand class  EOQ rule  hindsight  best period
+    Fast-moving distributor           25.9%         23.8%     15.8%      11.5%         10d
+    Long-lead importer                 7.0%         21.0%      4.3%     -10.4%         14d
+    Seasonal wholesaler               27.3%         25.1%     19.5%       8.1%         10d
+    Spare parts operation            -45.5%        -31.6%    -24.9%     -58.4%         42d
+    Volatile demand                   21.8%         87.5%     22.3%      11.2%         14d
+
+  Share of the one-setting gap each rule closes:
+    case                        demand class   EOQ rule   hindsight
+    Fast-moving distributor             8.1%      39.0%       55.5%
+    Long-lead importer               -201.2%      37.9%      250.0%
+    Seasonal wholesaler                 7.8%      28.5%       70.2%
+    Spare parts operation              30.4%      45.2%      -28.4%
+    Volatile demand                  -301.2%      -2.0%       48.6%
+
+  Best coverage period per item, by demand class, all cases pooled:
+    class              median    10th    90th   items
+    erratic               14d      7d     28d      50
+    intermittent          56d     10d    112d      50
+    lumpy                 21d      5d     87d      50
+    smooth                10d      7d     28d      50
+
+==========================================================================
+11. PLAN STABILITY. PRE-REGISTERED, AND NOT PUBLISHED
+==========================================================================
+  The rule was fixed before the run: a stability result is publishable
+  only if it holds under BOTH an absolute and a relative tolerance.
+  Absolute tolerance 0.5 units. Relative tolerance 10 per cent.
+
+    order_churn
+      spearman between the two tolerances   0.789
+      most stable rule, absolute tolerance  Per requirement
+      most stable rule, relative tolerance  Calendar bucket 28d
+      largest rank move                     5 places
+
+    PCR
+      spearman between the two tolerances   0.930
+      most stable rule, absolute tolerance  Per period 56d
+      most stable rule, relative tolerance  Per period 56d
+      largest rank move                     5 places
+
+  The order-level measure disagrees on which rule is most stable and
+  moves ranks by five places. No stability number is published.
+
+==========================================================================
+10. THE MAPPING. AN SAP LOT-SIZE KEY ARRIVING IN F&O
+==========================================================================
+  Seasonal wholesaler, service floor 95%.
+  'one setting' is the best single coverage period for the catalogue, Per period 10d.
+
+    key  procedure                         family    status            fill   tuned %  one set %
+    EX   Lot-for-lot order quantity        Static    Exact            1.000    -67.36     -59.70
+    FX   Fixed lot size                    Static    No equivalent    1.000    -36.36     -21.43
+    HB   Replenish to maximum stock level  Static    Exact            0.983    -44.56      -0.40
+    TB   Daily lot size                    Period    Exact            1.000    -67.36     -59.70
+    WB   Weekly lot size                   Period    Approximate      1.000    -20.87      -2.32
+    MB   Monthly lot size                  Period    Approximate      0.998    -35.52     -20.40
+    SP   Part Period Balancing             Optimum   No equivalent    0.999      3.34      27.58
+    WI   Sliding Economic Lot Size         Optimum   No equivalent    1.000    -13.34       6.98
+    DY   Dynamic Planning Calculation      Optimum   No equivalent    0.999    -12.29       8.29
+    GR   Groff Reorder Procedure           Optimum   No equivalent    0.998     -0.01      23.44

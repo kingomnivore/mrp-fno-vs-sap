@@ -1,0 +1,39 @@
+# Secrets. Nothing in this project reads them, but never commit them.
+.env
+.env.*
+*.key
+*.pem
+*.pfx
+*.p12
+secrets.*
+credentials.*
+appsettings.*.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# The source workbook IS committed, through Git LFS, so the repository runs as
+# cloned rather than needing a download first. See .gitattributes.
+# The daily demand matrix is derived from it on first run and is not committed.
+Dataset/UCI/daily_demand.csv
+Dataset/UCI/unit_price.csv
+
+# raw.pkl is a leftover cache from the drafting folder. No module in this
+# repository reads it, and at 57MB it is pure weight.
+Dataset/UCI/raw.pkl
+
+# outputs.txt, the results CSVs and the figures ARE committed on purpose, so a
+# visitor sees the result in the README without cloning anything.
+
+# Working log from run.py.
+run_log.txt
